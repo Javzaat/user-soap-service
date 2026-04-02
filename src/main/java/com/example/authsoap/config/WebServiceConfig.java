@@ -65,7 +65,6 @@ public class WebServiceConfig {
         FilterRegistrationBean<CorsFilter> bean =
                 new FilterRegistrationBean<>(new CorsFilter(source));
         bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
-
         return bean;
     }
 }
