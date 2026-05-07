@@ -1,64 +1,132 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<!--
+    auth.xsd нь SOAP Authentication Service-ийн request болон response-ийн бүтцийг тодорхойлж байгаа XML Schema файл юм.
+
+    Spring Web Services энэ XSD файлыг ашиглаад:
+    1. WSDL үүсгэнэ
+    2. JAXB generated Java class-ууд үүсгэнэ
+    3. SOAP request/response ямар element-тэй байхыг тодорхойлно
+
+    Энэ schema дээр RegisterUser, LoginUser, ValidateToken гэсэн гурван үндсэн SOAP operation-ийн
+    request болон response structure тодорхойлогдсон.
+-->
 <xs:schema 
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
     targetNamespace="http://example.com/authsoap"
     xmlns:tns="http://example.com/authsoap"
     elementFormDefault="qualified">
 
-    <!-- RegisterUser Request -->
+    <!--
+        targetNamespace нь SOAP message-ийн namespace юм.
+        Энэ утга WebServiceConfig болон AuthEndpoint дээр ашигласан namespace-тэй ижил байх ёстой.
+
+        elementFormDefault="qualified" гэдэг нь XML element-үүд namespace-тэй хамт ирэх ёстой гэсэн үг.
+    -->
+
+    <!--
+        RegisterUserRequest
+
+        Энэ element нь хэрэглэгч register хийх үед SOAP request body дотор ирнэ.
+        Request нь username болон password гэсэн хоёр утгатай.
+    -->
     <xs:element name="RegisterUserRequest">
         <xs:complexType>
             <xs:sequence>
+                <!-- Register хийх хэрэглэгчийн нэр -->
                 <xs:element name="username" type="xs:string"/>
+
+                <!-- Register хийх хэрэглэгчийн нууц үг -->
                 <xs:element name="password" type="xs:string"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
 
-    <!-- RegisterUser Response -->
+    <!--
+        RegisterUserResponse
+
+        Register operation-ийн хариу.
+        Жишээ response message:
+        - User registered successfully
+        - User already exists
+        - Username or password cannot be empty
+    -->
     <xs:element name="RegisterUserResponse">
         <xs:complexType>
             <xs:sequence>
+                <!-- Register амжилттай эсэхийг тайлбарлах message -->
                 <xs:element name="message" type="xs:string"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
 
-    <!-- LoginUser Request -->
+    <!--
+        LoginUserRequest
+
+        Хэрэглэгч login хийх үед username/password илгээх request.
+        SOAP service database дахь auth_user table-ээс username хайж,
+        password таарч байгаа эсэхийг шалгана.
+    -->
     <xs:element name="LoginUserRequest">
         <xs:complexType>
             <xs:sequence>
+                <!-- Login хийх хэрэглэгчийн нэр -->
                 <xs:element name="username" type="xs:string"/>
+
+                <!-- Login хийх хэрэглэгчийн нууц үг -->
                 <xs:element name="password" type="xs:string"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
 
-    <!-- LoginUser Response -->
+    <!--
+        LoginUserResponse
+
+        Login operation-ийн хариу.
+        Login амжилттай бол token буцаана.
+        Login амжилтгүй бол token хоосон string байж, message нь Invalid credentials байна.
+    -->
     <xs:element name="LoginUserResponse">
         <xs:complexType>
             <xs:sequence>
+                <!-- Амжилттай login хийсэн үед үүсэх authentication token -->
                 <xs:element name="token" type="xs:string"/>
+
+                <!-- Login successful эсвэл Invalid credentials гэх мэт тайлбар message -->
                 <xs:element name="message" type="xs:string"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
 
-    <!-- ValidateToken Request -->
+    <!--
+        ValidateTokenRequest
+
+        JSON service болон File Manager service нь protected request ирэх үед
+        token зөв эсэхийг шалгахын тулд энэ request-ийг SOAP service рүү явуулна.
+    -->
     <xs:element name="ValidateTokenRequest">
         <xs:complexType>
             <xs:sequence>
+                <!-- Frontend-ээс Authorization header-аар ирсэн token -->
                 <xs:element name="token" type="xs:string"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
 
-    <!-- ValidateToken Response -->
+    <!--
+        ValidateTokenResponse
+
+        Token valid эсэхийг буцаах response.
+        valid=true бол JSON/File service request-ийг үргэлжлүүлнэ.
+        valid=false бол service 401 Unauthorized буцаах боломжтой.
+    -->
     <xs:element name="ValidateTokenResponse">
         <xs:complexType>
             <xs:sequence>
+                <!-- Token хүчинтэй эсэхийг илэрхийлэх boolean утга -->
                 <xs:element name="valid" type="xs:boolean"/>
+
+                <!-- Token valid эсвэл Token invalid гэсэн тайлбар message -->
                 <xs:element name="message" type="xs:string"/>
             </xs:sequence>
         </xs:complexType>
