@@ -11,9 +11,12 @@ import com.example.authsoap.RegisterUserRequest;
 import com.example.authsoap.RegisterUserResponse;
 import com.example.authsoap.ValidateTokenRequest;
 import com.example.authsoap.ValidateTokenResponse;
+import com.example.authsoap.model.AuthUser;
+import com.example.authsoap.repository.AuthUserRepository;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Endpoint
@@ -21,9 +24,15 @@ public class AuthEndpoint {
 
     private static final String NAMESPACE_URI = "http://example.com/authsoap";
 
-    // In-memory storage
-    private final Map<String, String> users = new HashMap<>();
+    private final AuthUserRepository authUserRepository;
+
+    // Token-уудыг түр memory дээр хадгалж байна.
+    // User/password нь PostgreSQL DB дээр хадгалагдана.
     private final Map<String, String> tokens = new HashMap<>();
+
+    public AuthEndpoint(AuthUserRepository authUserRepository) {
+        this.authUserRepository = authUserRepository;
+    }
 
     @PayloadRoot(namespace = NAMESPACE_URI, localPart = "RegisterUserRequest")
     @ResponsePayload
@@ -39,13 +48,17 @@ public class AuthEndpoint {
             return response;
         }
 
-        if (users.containsKey(username)) {
+        username = username.trim();
+
+        if (authUserRepository.existsByUsername(username)) {
             response.setMessage("User already exists");
-        } else {
-            users.put(username, password);
-            response.setMessage("User registered successfully");
+            return response;
         }
 
+        AuthUser user = new AuthUser(username, password);
+        authUserRepository.save(user);
+
+        response.setMessage("User registered successfully");
         return response;
     }
 
@@ -58,9 +71,17 @@ public class AuthEndpoint {
         String username = request.getUsername();
         String password = request.getPassword();
 
-        String storedPassword = users.get(username);
+        if (username == null || username.isBlank() || password == null || password.isBlank()) {
+            response.setToken("");
+            response.setMessage("Invalid credentials");
+            return response;
+        }
 
-        if (storedPassword != null && storedPassword.equals(password)) {
+        username = username.trim();
+
+        Optional<AuthUser> userOptional = authUserRepository.findByUsername(username);
+
+        if (userOptional.isPresent() && userOptional.get().getPassword().equals(password)) {
             String token = UUID.randomUUID().toString();
             tokens.put(token, username);
 
@@ -80,7 +101,7 @@ public class AuthEndpoint {
 
         ValidateTokenResponse response = new ValidateTokenResponse();
 
-        boolean valid = tokens.containsKey(request.getToken());
+        boolean valid = request.getToken() != null && tokens.containsKey(request.getToken());
 
         response.setValid(valid);
 
